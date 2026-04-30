@@ -1,0 +1,31 @@
+{
+  "name": "ocuclaw",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "proxy": "node --env-file-if-exists=.env server/openclaw-proxy.mjs",
+    "dev:all": "node scripts/dev-all.mjs",
+    "whisper:local": "node scripts/whisper-local.mjs",
+    "whisper:use-local": "node scripts/use-whisper-target.mjs local",
+    "whisper:use-core42": "node scripts/use-whisper-target.mjs core42",
+    "whisper:use-openai": "node scripts/use-whisper-target.mjs openai",
+    "simulator": "node node_modules/@evenrealities/evenhub-simulator/bin/index.js http://localhost:5173",
+    "qr": "evenhub qr",
+    "set:network": "node scripts/set-network-whitelist.mjs",
+    "build": "tsc && vite build",
+    "pack": "npm run build && evenhub pack app.json dist -o ocuclaw.ehpk",
+    "pack:check": "npm run build && evenhub pack app.json dist -o ocuclaw.ehpk -c"
+  },
+  "dependencies": {
+    "@evenrealities/even_hub_sdk": "latest"
+  },
+  "devDependencies": {
+    "@evenrealities/evenhub-cli": "latest",
+    "@evenrealities/evenhub-simulator": "latest",
+    "@types/node": "^22.15.3",
+    "typescript": "^5.9.3",
+    "vite": "^7.0.0"
+  }
+}
