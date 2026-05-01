@@ -32,3 +32,4 @@ even-terminal-*.log
 
 # Vite cache
 .vite/
+docs/
