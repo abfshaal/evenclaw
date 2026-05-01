@@ -4,10 +4,10 @@ import { existsSync, mkdirSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 
-const WHISPER_DIR = process.env.OCUCLAW_WHISPER_DIR || join(homedir(), '.openclaw', 'whisper.cpp')
-const MODEL = process.env.OCUCLAW_WHISPER_MODEL || 'base.en'
-const PORT = Number(process.env.OCUCLAW_WHISPER_PORT || 9001)
-const HOST = process.env.OCUCLAW_WHISPER_HOST || '127.0.0.1'
+const WHISPER_DIR = process.env.GLASSES_CLAW_WHISPER_DIR || process.env.OCUCLAW_WHISPER_DIR || join(homedir(), '.glasses-claw', 'whisper.cpp')
+const MODEL = process.env.GLASSES_CLAW_WHISPER_MODEL || process.env.OCUCLAW_WHISPER_MODEL || 'base.en'
+const PORT = Number(process.env.GLASSES_CLAW_WHISPER_PORT || process.env.OCUCLAW_WHISPER_PORT || 9001)
+const HOST = process.env.GLASSES_CLAW_WHISPER_HOST || process.env.OCUCLAW_WHISPER_HOST || '127.0.0.1'
 const REPO = 'https://github.com/ggml-org/whisper.cpp'
 
 function run(cmd, args, opts = {}) {
@@ -60,7 +60,7 @@ function startServer(serverBin, modelPath) {
   console.log(`[whisper] starting server on ${HOST}:${PORT} with model ${MODEL}`)
   console.log(`[whisper] OpenAI-compatible endpoint: http://${HOST}:${PORT}/v1/audio/transcriptions`)
   console.log('[whisper] set in .env:')
-  console.log(`  OCUCLAW_TRANSCRIPTION_BASE_URL=http://${HOST}:${PORT}/v1`)
+  console.log(`  GLASSES_CLAW_TRANSCRIPTION_BASE_URL=http://${HOST}:${PORT}/v1`)
   console.log(`  OPENCLAW_TRANSCRIPTION_MODEL=whisper-1`)
   const child = spawn(
     serverBin,

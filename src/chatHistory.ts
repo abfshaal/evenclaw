@@ -17,7 +17,8 @@ export type ScrollSnapshot = {
   empty: boolean
 }
 
-const STORAGE_KEY = 'ocuclaw.chat_history'
+const STORAGE_KEY = 'glasses-claw.chat_history'
+const LEGACY_STORAGE_KEY = 'ocuclaw.chat_history'
 const MAX_ENTRIES = 40
 export const LINE_PX = 576
 const SEPARATOR_LINE = '─'.repeat(48)
@@ -233,8 +234,11 @@ export class ChatHistory {
   async load(): Promise<void> {
     if (!this.bridge) return
     try {
-      const raw = await this.bridge.getLocalStorage(STORAGE_KEY)
-      if (!raw) return
+      let raw = await this.bridge.getLocalStorage(STORAGE_KEY)
+      if (!raw) {
+        raw = await this.bridge.getLocalStorage(LEGACY_STORAGE_KEY)
+        if (!raw) return
+      }
       const parsed = JSON.parse(raw) as unknown
       if (!Array.isArray(parsed)) return
       const valid = parsed.filter((t): t is Turn =>

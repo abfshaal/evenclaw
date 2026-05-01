@@ -1,4 +1,4 @@
-export type OcuclawHealth = {
+export type GlassesClawHealth = {
   ok: boolean
   authRequired?: boolean
   openclaw?: {
@@ -8,24 +8,24 @@ export type OcuclawHealth = {
   }
 }
 
-export type OcuclawChatResponse = {
+export type GlassesClawChatResponse = {
   ok: boolean
   text: string
 }
 
-export type OcuclawTranscribeResponse = {
+export type GlassesClawTranscribeResponse = {
   ok: boolean
   text: string
 }
 
 function proxyHeaders(proxyKey: string): HeadersInit {
-  return proxyKey ? { 'X-Ocuclaw-Key': proxyKey } : {}
+  return proxyKey ? { 'X-Glasses-Claw-Key': proxyKey } : {}
 }
 
-export async function checkProxyHealth(proxyUrl: string, proxyKey: string, signal?: AbortSignal): Promise<OcuclawHealth> {
+export async function checkProxyHealth(proxyUrl: string, proxyKey: string, signal?: AbortSignal): Promise<GlassesClawHealth> {
   const response = await fetch(`${proxyUrl}/health`, { headers: proxyHeaders(proxyKey), signal })
   if (!response.ok) throw new Error(`Proxy health failed: HTTP ${response.status}`)
-  return (await response.json()) as OcuclawHealth
+  return (await response.json()) as GlassesClawHealth
 }
 
 export async function sendPrompt(proxyUrl: string, proxyKey: string, prompt: string, sessionId: string, signal?: AbortSignal): Promise<string> {
@@ -36,12 +36,12 @@ export async function sendPrompt(proxyUrl: string, proxyKey: string, prompt: str
     signal,
   })
 
-  const body = (await response.json().catch(() => ({}))) as Partial<OcuclawChatResponse> & {
+  const body = (await response.json().catch(() => ({}))) as Partial<GlassesClawChatResponse> & {
     error?: string
   }
 
   if (!response.ok || !body.ok) {
-    throw new Error(body.error || `OpenClaw chat failed: HTTP ${response.status}`)
+    throw new Error(body.error || `Glasses Claw chat failed: HTTP ${response.status}`)
   }
 
   return body.text || '(empty response)'
@@ -55,12 +55,12 @@ export async function transcribeVoicePrompt(proxyUrl: string, proxyKey: string, 
     signal,
   })
 
-  const body = (await response.json().catch(() => ({}))) as Partial<OcuclawTranscribeResponse> & {
+  const body = (await response.json().catch(() => ({}))) as Partial<GlassesClawTranscribeResponse> & {
     error?: string
   }
 
   if (!response.ok || !body.ok) {
-    throw new Error(body.error || `OpenClaw transcription failed: HTTP ${response.status}`)
+    throw new Error(body.error || `Glasses Claw transcription failed: HTTP ${response.status}`)
   }
 
   return body.text?.trim() || ''

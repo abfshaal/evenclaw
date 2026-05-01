@@ -1,7 +1,10 @@
 export const DEFAULT_PROXY_PORT = 8787
-export const PROXY_URL_STORAGE_KEY = 'ocuclaw.proxyUrl'
-export const PROXY_KEY_STORAGE_KEY = 'ocuclaw.proxyKey'
-export const SESSION_ID_STORAGE_KEY = 'ocuclaw.sessionId'
+export const PROXY_URL_STORAGE_KEY = 'glasses-claw.proxyUrl'
+export const PROXY_KEY_STORAGE_KEY = 'glasses-claw.proxyKey'
+export const SESSION_ID_STORAGE_KEY = 'glasses-claw.sessionId'
+const LEGACY_PROXY_URL_STORAGE_KEY = 'ocuclaw.proxyUrl'
+const LEGACY_PROXY_KEY_STORAGE_KEY = 'ocuclaw.proxyKey'
+const LEGACY_SESSION_ID_STORAGE_KEY = 'ocuclaw.sessionId'
 
 export type RuntimeConfig = {
   proxyUrl?: string
@@ -13,7 +16,7 @@ export function normalizeProxyUrl(value: string): string {
 }
 
 export function inferDefaultProxyUrl(): string {
-  const envUrl = import.meta.env.VITE_OPENCLAW_PROXY_URL
+  const envUrl = import.meta.env.VITE_GLASSES_CLAW_PROXY_URL || import.meta.env.VITE_OPENCLAW_PROXY_URL
   if (typeof envUrl === 'string' && envUrl.trim()) {
     return normalizeProxyUrl(envUrl)
   }
@@ -26,17 +29,19 @@ export function inferDefaultProxyUrl(): string {
 }
 
 export async function loadRuntimeConfig(): Promise<RuntimeConfig> {
-  try {
-    const response = await fetch('/ocuclaw-config.json', { cache: 'no-store' })
-    if (!response.ok) return {}
-    return (await response.json()) as RuntimeConfig
-  } catch {
-    return {}
+  for (const path of ['/glasses-claw-config.json', '/ocuclaw-config.json']) {
+    try {
+      const response = await fetch(path, { cache: 'no-store' })
+      if (response.ok) return (await response.json()) as RuntimeConfig
+    } catch {
+      // Try next config path.
+    }
   }
+  return {}
 }
 
 export function loadProxyUrl(configUrl?: string): string {
-  const saved = localStorage.getItem(PROXY_URL_STORAGE_KEY)
+  const saved = localStorage.getItem(PROXY_URL_STORAGE_KEY) || localStorage.getItem(LEGACY_PROXY_URL_STORAGE_KEY)
   if (saved?.trim()) return normalizeProxyUrl(saved)
   if (configUrl?.trim()) return normalizeProxyUrl(configUrl)
   return inferDefaultProxyUrl()
@@ -49,7 +54,7 @@ export function saveProxyUrl(value: string): string {
 }
 
 export function loadProxyKey(configKey?: string): string {
-  const saved = localStorage.getItem(PROXY_KEY_STORAGE_KEY)
+  const saved = localStorage.getItem(PROXY_KEY_STORAGE_KEY) || localStorage.getItem(LEGACY_PROXY_KEY_STORAGE_KEY)
   if (saved?.trim()) return saved.trim()
   return configKey?.trim() || ''
 }
@@ -62,13 +67,13 @@ export function saveProxyKey(value: string): string {
 
 function generateSessionId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return `ocuclaw-${crypto.randomUUID()}`
+    return `glasses-claw-${crypto.randomUUID()}`
   }
-  return `ocuclaw-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
+  return `glasses-claw-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
 }
 
 export function loadSessionId(): string {
-  const saved = localStorage.getItem(SESSION_ID_STORAGE_KEY)
+  const saved = localStorage.getItem(SESSION_ID_STORAGE_KEY) || localStorage.getItem(LEGACY_SESSION_ID_STORAGE_KEY)
   if (saved?.trim()) return saved.trim()
   const fresh = generateSessionId()
   localStorage.setItem(SESSION_ID_STORAGE_KEY, fresh)

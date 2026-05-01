@@ -1,11 +1,11 @@
 {
-  "name": "ocuclaw",
+  "name": "glasses-claw",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
-    "proxy": "node --env-file-if-exists=.env server/openclaw-proxy.mjs",
+    "proxy": "node --env-file-if-exists=.env server/glasses-claw-proxy.mjs",
     "dev:all": "node scripts/dev-all.mjs",
     "whisper:local": "node scripts/whisper-local.mjs",
     "whisper:use-local": "node scripts/use-whisper-target.mjs local",
@@ -15,8 +15,8 @@
     "qr": "evenhub qr",
     "set:network": "node scripts/set-network-whitelist.mjs",
     "build": "tsc && vite build",
-    "pack": "npm run build && evenhub pack app.json dist -o ocuclaw.ehpk",
-    "pack:check": "npm run build && evenhub pack app.json dist -o ocuclaw.ehpk -c"
+    "pack": "npm run build && evenhub pack app.json dist -o glasses-claw.ehpk",
+    "pack:check": "npm run build && evenhub pack app.json dist -o glasses-claw.ehpk -c"
   },
   "dependencies": {
     "@evenrealities/even_hub_sdk": "latest",

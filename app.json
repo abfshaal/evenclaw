@@ -1,7 +1,7 @@
 {
-  "package_id": "com.ocuclaw.g2",
+  "package_id": "com.glassesclaw.g2",
   "edition": "202601",
-  "name": "Ocuclaw",
+  "name": "Glasses Claw",
   "version": "0.1.0",
   "min_app_version": "2.0.0",
   "min_sdk_version": "0.0.10",
@@ -9,14 +9,14 @@
   "permissions": [
     {
       "name": "network",
-      "desc": "Connects to the local Ocuclaw proxy on your Mac to send prompts to OpenClaw and display responses.",
+      "desc": "Connects to the local Glasses Claw proxy on your Mac to send prompts and display responses.",
       "whitelist": [
         "https://confidence-crew-violations-sheriff.trycloudflare.com"
       ]
     },
     {
       "name": "g2-microphone",
-      "desc": "Captures G2 microphone audio for voice prompts sent to OpenClaw."
+      "desc": "Captures G2 microphone audio for voice prompts sent through Glasses Claw."
     }
   ],
   "supported_languages": [

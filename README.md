@@ -1,4 +1,4 @@
-# Ocuclaw
+# Glasses Claw
 
 Even Realities G2 app that routes requests to local OpenClaw through a tiny Mac-side proxy.
 
@@ -9,7 +9,7 @@ G2 glasses
   ⇅ Bluetooth
 Even Realities phone app WebView
   ⇅ HTTP over Wi-Fi
-Ocuclaw proxy on Mac :8787
+Glasses Claw proxy on Mac :8787
   ⇅ localhost + gateway token
 OpenClaw Gateway :18789
 ```
@@ -19,7 +19,7 @@ Reason for proxy:
 - Phone WebView cannot reach Mac `localhost`.
 - OpenClaw Gateway token stays on Mac, not embedded in the glasses app.
 - Proxy avoids browser CORS/origin issues against OpenClaw Gateway.
-- Proxy requires `X-Ocuclaw-Key` for `/chat` and `/transcribe`, so random LAN clients cannot use your OpenClaw token indirectly.
+- Proxy requires `X-Glasses-Claw-Key` for `/chat` and `/transcribe`, so random LAN clients cannot use your OpenClaw token indirectly.
 
 ## Requirements
 
@@ -53,7 +53,7 @@ Proxy prints LAN URL and stable proxy key, example:
 ```bash
 LAN URL: http://192.168.1.50:8787
 Proxy key: 12ab34cd56ef
-Proxy key file: ~/.openclaw/ocuclaw-proxy-key
+Proxy key file: ~/.glasses-claw/proxy-key
 ```
 
 Enter both values in phone UI. The key is generated once and reused across proxy restarts. Show it anytime:
@@ -65,7 +65,7 @@ make proxy-key
 Override key manually if needed:
 
 ```bash
-OCUCLAW_PROXY_KEY=choose-a-local-secret npm run proxy
+GLASSES_CLAW_PROXY_KEY=choose-a-local-secret npm run proxy
 ```
 
 Health check:
@@ -79,7 +79,7 @@ Chat test:
 ```bash
 curl -s http://127.0.0.1:8787/chat \
   -H 'Content-Type: application/json' \
-  -H 'X-Ocuclaw-Key: KEY_PRINTED_BY_PROXY' \
+  -H 'X-Glasses-Claw-Key: KEY_PRINTED_BY_PROXY' \
   -d '{"prompt":"Say hello in one short sentence"}'
 ```
 
@@ -121,7 +121,7 @@ App is modal. Modes: `idle`, `recording`, `review`, `thinking`.
 - Review (after transcript returns):
   - Scroll up / scroll down: cycle highlight between `Send` / `Edit` / `Cancel`.
   - Single tap: confirm highlighted choice. `Edit` re-enters recording and appends to current transcript. `Cancel` discards.
-- Thinking: input ignored while waiting for OpenClaw reply.
+- Thinking: input ignored while waiting for Glasses Claw reply.
 
 Phone UI mirrors all of this: edit proxy URL / key, send a typed prompt, start/stop voice manually, clear chat history.
 
@@ -129,7 +129,7 @@ Voice notes:
 
 - EvenHub SDK supports G2 mic capture with `bridge.audioControl(true)` and `event.audioEvent.audioPcm`.
 - Audio format is PCM 16 kHz, signed 16-bit little-endian, mono.
-- SDK does not provide built-in speech-to-text. Ocuclaw wraps recorded PCM as WAV and sends it through the proxy to OpenClaw's OpenAI-compatible `/v1/audio/transcriptions` endpoint.
+- SDK does not provide built-in speech-to-text. Glasses Claw wraps recorded PCM as WAV and sends it through the proxy to OpenClaw's OpenAI-compatible `/v1/audio/transcriptions` endpoint.
 - If your OpenClaw Gateway does not expose that endpoint/model, voice capture will work but transcription will fail. Set `OPENCLAW_TRANSCRIPTION_MODEL` if your gateway uses a model name other than `whisper-1`.
 
 EvenHub input notes:
@@ -140,7 +140,7 @@ EvenHub input notes:
 
 ## Packaging
 
-EvenHub `app.json` network whitelist must include the exact proxy origin. Before packing, set it to current Mac LAN URL. This also writes `public/ocuclaw-config.json` with proxy URL only:
+EvenHub `app.json` network whitelist must include the exact proxy origin. Before packing, set it to current Mac LAN URL. This also writes `public/glasses-claw-config.json` with proxy URL only:
 
 ```bash
 npm run set:network
@@ -161,7 +161,7 @@ npm run pack
 Output:
 
 ```bash
-ocuclaw.ehpk
+glasses-claw.ehpk
 ```
 
 Upload `.ehpk` to Even Hub developer portal.
@@ -177,15 +177,15 @@ Upload `.ehpk` to Even Hub developer portal.
 
 Proxy:
 
-- `OCUCLAW_PROXY_HOST` default `0.0.0.0`
-- `OCUCLAW_PROXY_PORT` default `8787`
+- `GLASSES_CLAW_PROXY_HOST` default `0.0.0.0`
+- `GLASSES_CLAW_PROXY_PORT` default `8787`
 - `OPENCLAW_BASE_URL` default `http://127.0.0.1:18789`
 - `OPENCLAW_GATEWAY_TOKEN` optional override; otherwise read from `~/.openclaw/openclaw.json`
 - `OPENCLAW_MODEL` default `openclaw`
 - `OPENCLAW_TRANSCRIPTION_MODEL` default `whisper-1`
-- `OCUCLAW_MAX_AUDIO_BYTES` default `5242880`
-- `OCUCLAW_PROXY_KEY` optional key override; default generated once at `~/.openclaw/ocuclaw-proxy-key`
+- `GLASSES_CLAW_MAX_AUDIO_BYTES` default `5242880`
+- `GLASSES_CLAW_PROXY_KEY` optional key override; default generated once at `~/.glasses-claw/proxy-key`
 
 Frontend:
 
-- `VITE_OPENCLAW_PROXY_URL` optional default proxy URL override
+- `VITE_GLASSES_CLAW_PROXY_URL` optional default proxy URL override

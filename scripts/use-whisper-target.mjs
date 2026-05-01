@@ -5,8 +5,8 @@ const target = process.argv[2]
 
 const PRESETS = {
   local: {
-    OCUCLAW_TRANSCRIPTION_BASE_URL: 'http://127.0.0.1:9001',
-    OCUCLAW_TRANSCRIPTION_PATH: '/inference',
+    GLASSES_CLAW_TRANSCRIPTION_BASE_URL: 'http://127.0.0.1:9001',
+    GLASSES_CLAW_TRANSCRIPTION_PATH: '/inference',
     OPENCLAW_TRANSCRIPTION_MODEL: 'whisper-1',
   },
   core42: {
@@ -28,7 +28,14 @@ const env = PRESETS[target]
 const path = '.env'
 let body = existsSync(path) ? readFileSync(path, 'utf8') : ''
 
-const transcriptionKeys = ['OCUCLAW_TRANSCRIPTION_BASE_URL', 'OCUCLAW_TRANSCRIPTION_PATH', 'OPENCLAW_TRANSCRIPTION_MODEL', 'OPENAI_BASE_URL']
+const transcriptionKeys = [
+  'GLASSES_CLAW_TRANSCRIPTION_BASE_URL',
+  'GLASSES_CLAW_TRANSCRIPTION_PATH',
+  'OCUCLAW_TRANSCRIPTION_BASE_URL',
+  'OCUCLAW_TRANSCRIPTION_PATH',
+  'OPENCLAW_TRANSCRIPTION_MODEL',
+  'OPENAI_BASE_URL',
+]
 
 const lines = body.split('\n').map((line) => {
   const trimmed = line.trim()

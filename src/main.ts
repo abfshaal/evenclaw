@@ -9,13 +9,13 @@ import {
   type EvenAppBridge,
   type EvenHubEvent,
 } from '@evenrealities/even_hub_sdk'
-import { checkProxyHealth, sendPrompt, transcribeVoicePrompt } from './openclawClient'
+import { checkProxyHealth, sendPrompt, transcribeVoicePrompt } from './glassesClawClient'
 import { inferDefaultProxyUrl, loadProxyKey, loadProxyUrl, loadRuntimeConfig, loadSessionId, rotateSessionId, saveProxyKey, saveProxyUrl } from './config'
 import { ChatHistory } from './chatHistory'
 import { cycleReviewChoice, renderGlasses, viewportLinesFor, type GlassesMode, type ReviewChoice } from './glassesView'
 
 const GLASSES_TEXT_ID = 1
-const GLASSES_TEXT_NAME = 'ocuclaw-main'
+const GLASSES_TEXT_NAME = 'glasses-claw'
 const VOICE_SAMPLE_RATE = 16_000
 const VOICE_BYTES_PER_SAMPLE = 2
 const MAX_VOICE_BYTES = 3 * 1024 * 1024
@@ -136,13 +136,13 @@ function renderPhoneUi(): void {
   app.innerHTML = `
     <section class="panel">
       <div class="card">
-        <h1>OCUCLAW</h1>
+        <h1>Glasses Claw</h1>
         <p class="status"><strong>Glasses:</strong> <span id="bridge-status"></span></p>
         <p class="status"><strong>Proxy:</strong> <span id="proxy-status"></span></p>
         <p class="status"><strong>Mode:</strong> <span id="mode-status"></span></p>
         <p class="status"><strong>Status:</strong> <span id="transient-status"></span></p>
 
-        <label for="proxy-url">Ocuclaw proxy URL</label>
+        <label for="proxy-url">Glasses Claw proxy URL</label>
         <input id="proxy-url" autocomplete="off" spellcheck="false" />
         <label for="proxy-key">Proxy key</label>
         <input id="proxy-key" autocomplete="off" spellcheck="false" placeholder="Printed by npm run proxy" />
@@ -316,7 +316,7 @@ async function checkProxy(): Promise<void> {
 
   try {
     const health = await checkProxyHealth(state.proxyUrl, state.proxyKey)
-    state.proxyStatus = health.openclaw?.ok ? 'Connected to OpenClaw' : `Proxy OK, OpenClaw unavailable: ${health.openclaw?.error || 'unknown'}`
+    state.proxyStatus = health.openclaw?.ok ? 'Connected to Glasses Claw backend' : `Proxy OK, backend unavailable: ${health.openclaw?.error || 'unknown'}`
   } catch (error) {
     state.proxyStatus = `Proxy unavailable: ${error instanceof Error ? error.message : String(error)}`
   } finally {
@@ -410,7 +410,7 @@ async function executeReviewSend(): Promise<void> {
     const reply = await sendPrompt(state.proxyUrl, state.proxyKey, prompt, state.sessionId)
     history.append({ role: 'user', text: prompt, ts: Date.now() })
     history.append({ role: 'assistant', text: reply, ts: Date.now() })
-    state.proxyStatus = 'Connected to OpenClaw'
+    state.proxyStatus = 'Connected to Glasses Claw backend'
     state.busy = false
     state.pendingTranscript = ''
     setMode('idle')

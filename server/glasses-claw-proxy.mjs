@@ -5,17 +5,18 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { homedir, networkInterfaces } from 'node:os'
 import { join } from 'node:path'
 
-const PROXY_HOST = process.env.OCUCLAW_PROXY_HOST || '0.0.0.0'
-const PROXY_PORT = Number(process.env.OCUCLAW_PROXY_PORT || 8787)
+const PROXY_HOST = process.env.GLASSES_CLAW_PROXY_HOST || process.env.OCUCLAW_PROXY_HOST || '0.0.0.0'
+const PROXY_PORT = Number(process.env.GLASSES_CLAW_PROXY_PORT || process.env.OCUCLAW_PROXY_PORT || 8787)
 const OPENCLAW_BASE_URL = (process.env.OPENCLAW_BASE_URL || 'http://127.0.0.1:18789').replace(/\/+$/, '')
 const OPENCLAW_MODEL = process.env.OPENCLAW_MODEL || 'openclaw'
 const OPENCLAW_TRANSCRIPTION_MODEL = process.env.OPENCLAW_TRANSCRIPTION_MODEL || 'whisper-1'
-const TRANSCRIPTION_BASE_URL = (process.env.OCUCLAW_TRANSCRIPTION_BASE_URL || process.env.OPENAI_BASE_URL || OPENCLAW_BASE_URL).replace(/\/+$/, '')
-const TRANSCRIPTION_API_KEY = process.env.OCUCLAW_TRANSCRIPTION_API_KEY || process.env.OPENAI_API_KEY || ''
-const TRANSCRIPTION_PATH = process.env.OCUCLAW_TRANSCRIPTION_PATH || '/audio/transcriptions'
-const PROXY_KEY_PATH = join(homedir(), '.openclaw', 'ocuclaw-proxy-key')
+const TRANSCRIPTION_BASE_URL = (process.env.GLASSES_CLAW_TRANSCRIPTION_BASE_URL || process.env.OCUCLAW_TRANSCRIPTION_BASE_URL || process.env.OPENAI_BASE_URL || OPENCLAW_BASE_URL).replace(/\/+$/, '')
+const TRANSCRIPTION_API_KEY = process.env.GLASSES_CLAW_TRANSCRIPTION_API_KEY || process.env.OCUCLAW_TRANSCRIPTION_API_KEY || process.env.OPENAI_API_KEY || ''
+const TRANSCRIPTION_PATH = process.env.GLASSES_CLAW_TRANSCRIPTION_PATH || process.env.OCUCLAW_TRANSCRIPTION_PATH || '/audio/transcriptions'
+const PROXY_KEY_PATH = join(homedir(), '.glasses-claw', 'proxy-key')
+const LEGACY_PROXY_KEY_PATH = join(homedir(), '.openclaw', 'ocuclaw-proxy-key')
 const MAX_BODY_BYTES = 32 * 1024
-const MAX_AUDIO_BYTES = Number(process.env.OCUCLAW_MAX_AUDIO_BYTES || 5 * 1024 * 1024)
+const MAX_AUDIO_BYTES = Number(process.env.GLASSES_CLAW_MAX_AUDIO_BYTES || process.env.OCUCLAW_MAX_AUDIO_BYTES || 5 * 1024 * 1024)
 
 let cachedToken = process.env.OPENCLAW_GATEWAY_TOKEN || ''
 const PROXY_KEY = await loadProxyKey()
@@ -28,7 +29,7 @@ function jsonResponse(res, status, body) {
     'Cache-Control': 'no-store',
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, X-Ocuclaw-Key',
+    'Access-Control-Allow-Headers': 'Content-Type, X-Glasses-Claw-Key, X-Ocuclaw-Key',
   })
   res.end(data)
 }
@@ -44,7 +45,7 @@ function textResponse(res, status, body) {
 }
 
 function hasValidProxyKey(req) {
-  const provided = req.headers['x-ocuclaw-key']
+  const provided = req.headers['x-glasses-claw-key'] || req.headers['x-ocuclaw-key']
   if (typeof provided !== 'string') return false
 
   const expectedBytes = Buffer.from(PROXY_KEY)
@@ -72,6 +73,7 @@ async function readJsonBody(req) {
 }
 
 async function loadProxyKey() {
+  if (process.env.GLASSES_CLAW_PROXY_KEY?.trim()) return process.env.GLASSES_CLAW_PROXY_KEY.trim()
   if (process.env.OCUCLAW_PROXY_KEY?.trim()) return process.env.OCUCLAW_PROXY_KEY.trim()
 
   try {
@@ -81,8 +83,15 @@ async function loadProxyKey() {
     if (error?.code !== 'ENOENT') throw error
   }
 
+  try {
+    const legacyKey = (await readFile(LEGACY_PROXY_KEY_PATH, 'utf8')).trim()
+    if (legacyKey) return legacyKey
+  } catch (error) {
+    if (error?.code !== 'ENOENT') throw error
+  }
+
   const key = randomBytes(12).toString('hex')
-  await mkdir(join(homedir(), '.openclaw'), { recursive: true })
+  await mkdir(join(homedir(), '.glasses-claw'), { recursive: true })
   await writeFile(PROXY_KEY_PATH, `${key}\n`, { mode: 0o600 })
   return key
 }
@@ -152,7 +161,7 @@ async function openclawChat(prompt, sessionId) {
       {
         role: 'system',
         content:
-          'You are Ocuclaw, a concise assistant replying to Even Realities G2 smart glasses. Keep responses short, readable at a glance, and under 300 characters unless asked otherwise.',
+          'You are Glasses Claw, a concise assistant replying to Even Realities G2 smart glasses. Keep responses short, readable at a glance, and under 300 characters unless asked otherwise.',
       },
       { role: 'user', content: prompt },
     ],
@@ -200,7 +209,7 @@ const server = createServer(async (req, res) => {
     }
 
     if (req.method === 'GET' && url.pathname === '/') {
-      textResponse(res, 200, 'Ocuclaw proxy OK\n')
+      textResponse(res, 200, 'Glasses Claw proxy OK\n')
       return
     }
 
@@ -220,7 +229,7 @@ const server = createServer(async (req, res) => {
 
     if (req.method === 'POST' && url.pathname === '/transcribe') {
       if (!hasValidProxyKey(req)) {
-        jsonResponse(res, 401, { ok: false, error: 'Invalid or missing Ocuclaw proxy key' })
+        jsonResponse(res, 401, { ok: false, error: 'Invalid or missing Glasses Claw proxy key' })
         return
       }
 
@@ -237,7 +246,7 @@ const server = createServer(async (req, res) => {
 
     if (req.method === 'POST' && url.pathname === '/chat') {
       if (!hasValidProxyKey(req)) {
-        jsonResponse(res, 401, { ok: false, error: 'Invalid or missing Ocuclaw proxy key' })
+        jsonResponse(res, 401, { ok: false, error: 'Invalid or missing Glasses Claw proxy key' })
         return
       }
 
@@ -261,7 +270,7 @@ const server = createServer(async (req, res) => {
 })
 
 server.listen(PROXY_PORT, PROXY_HOST, () => {
-  console.log(`Ocuclaw proxy listening on http://${PROXY_HOST}:${PROXY_PORT}`)
+  console.log(`Glasses Claw proxy listening on http://${PROXY_HOST}:${PROXY_PORT}`)
   for (const url of lanUrls()) console.log(`LAN URL: ${url}`)
   console.log(`OpenClaw Gateway: ${OPENCLAW_BASE_URL}`)
   const t = resolveTranscriptionTarget()
@@ -270,5 +279,5 @@ server.listen(PROXY_PORT, PROXY_HOST, () => {
   console.log(`Transcription endpoint: ${t.baseUrl}${path} (model: ${OPENCLAW_TRANSCRIPTION_MODEL}) ${authNote}`)
   console.log(`Proxy key: ${PROXY_KEY}`)
   console.log(`Proxy key file: ${PROXY_KEY_PATH}`)
-  console.log('Enter this key in the Ocuclaw phone UI. Set OCUCLAW_PROXY_KEY to override it.')
+  console.log('Enter this key in the Glasses Claw phone UI. Set GLASSES_CLAW_PROXY_KEY to override it.')
 })
