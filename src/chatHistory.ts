@@ -1,4 +1,5 @@
 import type { EvenAppBridge } from '@evenrealities/even_hub_sdk'
+import { getTextWidth } from '@evenrealities/pretext'
 
 export type Turn = {
   role: 'user' | 'assistant'
@@ -18,43 +19,88 @@ export type ScrollSnapshot = {
 
 const STORAGE_KEY = 'ocuclaw.chat_history'
 const MAX_ENTRIES = 40
-const LINE_WIDTH = 56
+export const LINE_PX = 576
+const SEPARATOR_LINE = '─'.repeat(48)
 
-export function wrapLine(text: string, width: number): string[] {
+export function wrapToPx(text: string, maxPx: number): string[] {
   if (!text) return ['']
   const out: string[] = []
-  const paragraphs = text.split('\n')
-  for (const para of paragraphs) {
+  for (const para of text.split('\n')) {
     if (para.length === 0) {
       out.push('')
       continue
     }
-    const words = para.split(/(\s+)/)
-    let line = ''
-    for (const w of words) {
-      if (!w) continue
-      if ((line + w).length <= width) {
-        line += w
-        continue
-      }
-      if (line.trim().length > 0) {
-        out.push(line.trimEnd())
-        line = ''
-      }
-      if (w.length > width) {
-        let rest = w
-        while (rest.length > width) {
-          out.push(rest.slice(0, width))
-          rest = rest.slice(width)
-        }
-        line = rest
-      } else {
-        line = w.trimStart()
-      }
-    }
-    if (line.trim().length > 0) out.push(line.trimEnd())
+    out.push(...wrapParaPx(para, maxPx))
   }
   return out.length === 0 ? [''] : out
+}
+
+function wrapParaInline(para: string, firstPx: number, restPx: number): string[] {
+  if (!para) return ['']
+  const words = para.split(/(\s+)/).filter((w) => w.length > 0)
+  const out: string[] = []
+  let line = ''
+  let budget = firstPx
+  for (const w of words) {
+    const candidate = line + w
+    if (getTextWidth(candidate) <= budget) {
+      line = candidate
+      continue
+    }
+    if (line.trim().length > 0) {
+      out.push(line.trimEnd())
+      line = ''
+      budget = restPx
+    }
+    if (getTextWidth(w) > budget) {
+      let rest = w
+      while (getTextWidth(rest) > budget) {
+        let cut = rest.length
+        while (cut > 0 && getTextWidth(rest.slice(0, cut)) > budget) cut -= 1
+        if (cut <= 0) cut = 1
+        out.push(rest.slice(0, cut))
+        rest = rest.slice(cut)
+        budget = restPx
+      }
+      line = rest
+    } else {
+      line = w.trimStart()
+    }
+  }
+  if (line.trim().length > 0) out.push(line.trimEnd())
+  return out.length === 0 ? [''] : out
+}
+
+function wrapParaPx(para: string, maxPx: number): string[] {
+  const words = para.split(/(\s+)/).filter((w) => w.length > 0)
+  const out: string[] = []
+  let line = ''
+  for (const w of words) {
+    const candidate = line + w
+    if (getTextWidth(candidate) <= maxPx) {
+      line = candidate
+      continue
+    }
+    if (line.trim().length > 0) {
+      out.push(line.trimEnd())
+      line = ''
+    }
+    if (getTextWidth(w) > maxPx) {
+      let rest = w
+      while (getTextWidth(rest) > maxPx) {
+        let cut = rest.length
+        while (cut > 0 && getTextWidth(rest.slice(0, cut)) > maxPx) cut -= 1
+        if (cut <= 0) cut = 1
+        out.push(rest.slice(0, cut))
+        rest = rest.slice(cut)
+      }
+      line = rest
+    } else {
+      line = w.trimStart()
+    }
+  }
+  if (line.trim().length > 0) out.push(line.trimEnd())
+  return out
 }
 
 export class ChatHistory {
@@ -101,17 +147,25 @@ export class ChatHistory {
     for (let i = 0; i < this.turns.length; i += 1) {
       const t = this.turns[i]
       turnStarts.push(out.length)
-      const label = t.role === 'user' ? '▎You' : '▎Yoda'
-      const body = wrapLine(t.text, LINE_WIDTH - 2).map((l) => `  ${l}`)
-      out.push(label)
-      out.push(...body)
+      const prefix = t.role === 'user' ? 'You> ' : 'Yoda> '
+      const prefixPx = getTextWidth(prefix)
+      const firstLineBudget = LINE_PX - prefixPx
+      const paragraphs = t.text.split('\n')
+      const first = paragraphs.shift() ?? ''
+      const firstWrapped = wrapParaInline(first, firstLineBudget, LINE_PX)
+      out.push(prefix + (firstWrapped[0] ?? ''))
+      for (let j = 1; j < firstWrapped.length; j += 1) out.push(firstWrapped[j])
+      for (const para of paragraphs) {
+        if (para.length === 0) {
+          out.push('')
+          continue
+        }
+        out.push(...wrapToPx(para, LINE_PX))
+      }
 
       const next = this.turns[i + 1]
-      if (!next) continue
-      if (t.role === 'assistant' && next.role === 'user') {
-        out.push('')
-        out.push('━'.repeat(LINE_WIDTH))
-        out.push('')
+      if (next && t.role === 'assistant' && next.role === 'user') {
+        out.push(SEPARATOR_LINE)
       }
     }
     return { lines: out, turnStarts }
@@ -150,12 +204,12 @@ export class ChatHistory {
     this.pinToLatestQuestion = false
   }
 
-  scrollUp(viewportLines: number, step = 2): void {
-    this.scroll(viewportLines, -step)
+  scrollUp(viewportLines: number, step?: number): void {
+    this.scroll(viewportLines, -(step ?? Math.max(1, viewportLines - 1)))
   }
 
-  scrollDown(viewportLines: number, step = 2): void {
-    this.scroll(viewportLines, step)
+  scrollDown(viewportLines: number, step?: number): void {
+    this.scroll(viewportLines, step ?? Math.max(1, viewportLines - 1))
   }
 
   viewport(viewportLines: number): ScrollSnapshot {

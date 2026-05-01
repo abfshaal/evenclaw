@@ -19,7 +19,8 @@
     "pack:check": "npm run build && evenhub pack app.json dist -o ocuclaw.ehpk -c"
   },
   "dependencies": {
-    "@evenrealities/even_hub_sdk": "latest"
+    "@evenrealities/even_hub_sdk": "latest",
+    "@evenrealities/pretext": "^0.1.4"
   },
   "devDependencies": {
     "@evenrealities/evenhub-cli": "latest",

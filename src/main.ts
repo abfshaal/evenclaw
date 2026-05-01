@@ -12,13 +12,14 @@ import {
 import { checkProxyHealth, sendPrompt, transcribeVoicePrompt } from './openclawClient'
 import { inferDefaultProxyUrl, loadProxyKey, loadProxyUrl, loadRuntimeConfig, saveProxyKey, saveProxyUrl } from './config'
 import { ChatHistory } from './chatHistory'
-import { cycleReviewChoice, renderGlasses, VIEWPORT_LINES, type GlassesMode, type ReviewChoice } from './glassesView'
+import { cycleReviewChoice, renderGlasses, viewportLinesFor, type GlassesMode, type ReviewChoice } from './glassesView'
 
 const GLASSES_TEXT_ID = 1
 const GLASSES_TEXT_NAME = 'ocuclaw-main'
 const VOICE_SAMPLE_RATE = 16_000
 const VOICE_BYTES_PER_SAMPLE = 2
 const MAX_VOICE_BYTES = 3 * 1024 * 1024
+const GLASSES_SCROLL_STEP_LINES = 3
 
 type AppMode = 'idle' | 'recording' | 'review' | 'thinking'
 
@@ -35,6 +36,7 @@ type AppState = {
   voiceBytes: number
   recordingStartedAt: number
   busy: boolean
+  displayHidden: boolean
 }
 
 const state: AppState = {
@@ -50,6 +52,7 @@ const state: AppState = {
   voiceBytes: 0,
   recordingStartedAt: 0,
   busy: false,
+  displayHidden: false,
 }
 
 const history = new ChatHistory()
@@ -80,7 +83,8 @@ function currentGlassesMode(): GlassesMode {
 }
 
 function glassesText(): string {
-  return renderGlasses(history.viewport(VIEWPORT_LINES), currentGlassesMode())
+  const mode = currentGlassesMode()
+  return renderGlasses(history.viewport(viewportLinesFor(mode)), mode)
 }
 
 function startRecordingTicker(): void {
@@ -103,13 +107,13 @@ function stopRecordingTicker(): void {
 async function updateGlasses(): Promise<void> {
   if (!bridge || !glassesReady) return
 
-  const content = glassesText()
+  const content = state.displayHidden ? ' ' : glassesText()
   await bridge.textContainerUpgrade(
     new TextContainerUpgrade({
       containerID: GLASSES_TEXT_ID,
       containerName: GLASSES_TEXT_NAME,
       contentOffset: 0,
-      contentLength: content.length,
+      contentLength: 0,
       content,
     }),
   )
@@ -152,7 +156,7 @@ function renderPhoneUi(): void {
 
         <h2>Chat log</h2>
         <div class="chat-log" id="chat-log"></div>
-        <p class="hint">Phone and Mac must be on same Wi-Fi. Proxy on Mac port 8787. Glasses gestures: double-tap = record, scroll up/down = paginate or cycle review choices, single tap = confirm review.</p>
+        <p class="hint">Phone and Mac must be on same Wi-Fi. Proxy on Mac port 8787. Glasses gestures: single tap idle = hide/show display, double-tap = record, scroll up/down = paginate or cycle review choices, single tap review = confirm.</p>
       </div>
     </section>
   `
@@ -259,7 +263,7 @@ function syncPhoneUi(): void {
 
   if (bridgeStatus) bridgeStatus.textContent = state.bridgeStatus
   if (proxyStatus) proxyStatus.textContent = state.proxyStatus
-  if (modeStatus) modeStatus.textContent = `${state.mode}${state.mode === 'review' ? ` (highlight: ${state.reviewChoice})` : ''}`
+  if (modeStatus) modeStatus.textContent = `${state.mode}${state.displayHidden ? ' (display hidden)' : ''}${state.mode === 'review' ? ` (highlight: ${state.reviewChoice})` : ''}`
   if (transientStatus) transientStatus.textContent = state.transientStatus || ''
   if (proxyInput && proxyInput.value !== state.proxyUrl) proxyInput.value = state.proxyUrl
   if (proxyKeyInput && proxyKeyInput.value !== state.proxyKey) proxyKeyInput.value = state.proxyKey
@@ -292,6 +296,12 @@ function setMode(mode: AppMode): void {
 
 function setTransient(message: string | null): void {
   state.transientStatus = message
+  syncPhoneUi()
+  void updateGlasses()
+}
+
+function setDisplayHidden(hidden: boolean): void {
+  state.displayHidden = hidden
   syncPhoneUi()
   void updateGlasses()
 }
@@ -513,15 +523,24 @@ function handleEvenHubEvent(event: EvenHubEvent): void {
 
   const eventType = getEventType(event)
 
+  if (state.displayHidden) {
+    if (eventType === OsEventTypeList.CLICK_EVENT) {
+      setDisplayHidden(false)
+    }
+    return
+  }
+
   switch (state.mode) {
     case 'idle':
-      if (eventType === OsEventTypeList.DOUBLE_CLICK_EVENT) {
+      if (eventType === OsEventTypeList.CLICK_EVENT) {
+        setDisplayHidden(true)
+      } else if (eventType === OsEventTypeList.DOUBLE_CLICK_EVENT) {
         void startRecording()
       } else if (eventType === OsEventTypeList.SCROLL_TOP_EVENT) {
-        history.scrollUp(VIEWPORT_LINES)
+        history.scrollUp(viewportLinesFor(currentGlassesMode()), GLASSES_SCROLL_STEP_LINES)
         void updateGlasses()
       } else if (eventType === OsEventTypeList.SCROLL_BOTTOM_EVENT) {
-        history.scrollDown(VIEWPORT_LINES)
+        history.scrollDown(viewportLinesFor(currentGlassesMode()), GLASSES_SCROLL_STEP_LINES)
         void updateGlasses()
       }
       return

@@ -1,7 +1,8 @@
-import type { ScrollSnapshot } from './chatHistory'
+import { pxTruncate, getTextWidth } from '@evenrealities/pretext'
+import { LINE_PX, type ScrollSnapshot } from './chatHistory'
 
 const MAX_GLASSES_CHARS = 1600
-const LINE_WIDTH = 56
+const MAX_LINES = 10
 
 export type ReviewChoice = 'send' | 'edit' | 'cancel'
 
@@ -11,34 +12,29 @@ export type GlassesMode =
   | { kind: 'review'; transcript: string; choice: ReviewChoice }
   | { kind: 'thinking'; prompt: string }
 
-const SEPARATOR = '─'.repeat(LINE_WIDTH)
-
 const REVIEW_ORDER: readonly ReviewChoice[] = ['send', 'edit', 'cancel'] as const
 const REVIEW_LABELS: Record<ReviewChoice, string> = { send: 'Send', edit: 'Edit', cancel: 'Cancel' }
 
-export const VIEWPORT_LINES = 5
-
-function truncate(text: string, max: number): string {
-  if (text.length <= max) return text
-  return '…' + text.slice(text.length - (max - 1))
-}
-
-function pad(text: string, width: number): string {
-  if (text.length >= width) return text
-  return text + ' '.repeat(width - text.length)
+function pad(text: string, widthPx: number): string {
+  const cur = getTextWidth(text)
+  if (cur >= widthPx) return text
+  const spacePx = getTextWidth(' ')
+  const n = Math.max(0, Math.floor((widthPx - cur) / spacePx))
+  return text + ' '.repeat(n)
 }
 
 function barLine(left: string, rightIcon: string): string {
-  const maxLeft = LINE_WIDTH - 2
-  const truncated = truncate(left, maxLeft)
-  return `${pad(truncated, LINE_WIDTH - 1)}${rightIcon}`
+  const iconPx = getTextWidth(rightIcon) + getTextWidth(' ')
+  const leftBudget = LINE_PX - iconPx
+  const truncated = pxTruncate(left, leftBudget)
+  return `${pad(truncated, leftBudget)}${rightIcon}`
 }
 
-function inputBar(mode: GlassesMode): string[] {
+function inputBarLines(mode: GlassesMode): string[] {
   switch (mode.kind) {
     case 'idle': {
-      const text = mode.transientStatus ? `! ${mode.transientStatus}` : ''
-      return [barLine(text, '○')]
+      if (!mode.transientStatus) return []
+      return [barLine(`! ${mode.transientStatus}`, '○')]
     }
     case 'recording': {
       const icon = mode.blink ? '●' : '○'
@@ -53,18 +49,21 @@ function inputBar(mode: GlassesMode): string[] {
   }
 }
 
-function viewportLines(view: ScrollSnapshot | null): string[] {
-  if (!view) return Array(VIEWPORT_LINES).fill('')
-  const lines = view.lines.slice()
-  while (lines.length < VIEWPORT_LINES) lines.push('')
+export function viewportLinesFor(mode: GlassesMode): number {
+  return Math.max(1, MAX_LINES - inputBarLines(mode).length)
+}
+
+function fillViewport(view: ScrollSnapshot | null, count: number): string[] {
+  if (!view) return Array(count).fill('')
+  const lines = view.lines.slice(0, count)
+  while (lines.length < count) lines.push('')
   return lines
 }
 
 export function renderGlasses(view: ScrollSnapshot, mode: GlassesMode): string {
-  const top = viewportLines(view)
-  const bar = inputBar(mode)
-  const out = [...top, SEPARATOR, ...bar]
-  return out.join('\n').slice(0, MAX_GLASSES_CHARS)
+  const bar = inputBarLines(mode)
+  const top = fillViewport(view, MAX_LINES - bar.length)
+  return [...top, ...bar].join('\n').slice(0, MAX_GLASSES_CHARS)
 }
 
 export function cycleReviewChoice(current: ReviewChoice, direction: 'next' | 'prev'): ReviewChoice {
