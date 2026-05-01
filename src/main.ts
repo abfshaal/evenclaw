@@ -10,7 +10,7 @@ import {
   type EvenHubEvent,
 } from '@evenrealities/even_hub_sdk'
 import { checkProxyHealth, sendPrompt, transcribeVoicePrompt } from './openclawClient'
-import { inferDefaultProxyUrl, loadProxyKey, loadProxyUrl, loadRuntimeConfig, saveProxyKey, saveProxyUrl } from './config'
+import { inferDefaultProxyUrl, loadProxyKey, loadProxyUrl, loadRuntimeConfig, loadSessionId, rotateSessionId, saveProxyKey, saveProxyUrl } from './config'
 import { ChatHistory } from './chatHistory'
 import { cycleReviewChoice, renderGlasses, viewportLinesFor, type GlassesMode, type ReviewChoice } from './glassesView'
 
@@ -28,6 +28,7 @@ type AppState = {
   proxyStatus: string
   proxyUrl: string
   proxyKey: string
+  sessionId: string
   prompt: string
   mode: AppMode
   reviewChoice: ReviewChoice
@@ -44,6 +45,7 @@ const state: AppState = {
   proxyStatus: 'Not checked',
   proxyUrl: inferDefaultProxyUrl(),
   proxyKey: '',
+  sessionId: '',
   prompt: '',
   mode: 'idle',
   reviewChoice: 'send',
@@ -230,6 +232,7 @@ function bindPhoneUi(): void {
 
   clearHistoryButton.addEventListener('click', () => {
     history.clear()
+    state.sessionId = rotateSessionId()
     syncPhoneUi()
     void updateGlasses()
   })
@@ -404,7 +407,7 @@ async function executeReviewSend(): Promise<void> {
   setMode('thinking')
 
   try {
-    const reply = await sendPrompt(state.proxyUrl, state.proxyKey, prompt)
+    const reply = await sendPrompt(state.proxyUrl, state.proxyKey, prompt, state.sessionId)
     history.append({ role: 'user', text: prompt, ts: Date.now() })
     history.append({ role: 'assistant', text: reply, ts: Date.now() })
     state.proxyStatus = 'Connected to OpenClaw'
@@ -601,6 +604,7 @@ async function bootstrap(): Promise<void> {
   const runtimeConfig = await loadRuntimeConfig()
   state.proxyUrl = loadProxyUrl(runtimeConfig.proxyUrl)
   state.proxyKey = loadProxyKey(runtimeConfig.proxyKey)
+  state.sessionId = loadSessionId()
   renderPhoneUi()
   await connectEvenBridge()
   await checkProxy()

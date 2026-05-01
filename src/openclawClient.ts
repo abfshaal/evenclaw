@@ -28,11 +28,11 @@ export async function checkProxyHealth(proxyUrl: string, proxyKey: string, signa
   return (await response.json()) as OcuclawHealth
 }
 
-export async function sendPrompt(proxyUrl: string, proxyKey: string, prompt: string, signal?: AbortSignal): Promise<string> {
+export async function sendPrompt(proxyUrl: string, proxyKey: string, prompt: string, sessionId: string, signal?: AbortSignal): Promise<string> {
   const response = await fetch(`${proxyUrl}/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...proxyHeaders(proxyKey) },
-    body: JSON.stringify({ prompt }),
+    body: JSON.stringify({ prompt, sessionId }),
     signal,
   })
 

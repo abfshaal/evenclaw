@@ -144,26 +144,28 @@ async function openclawTranscribe(wavAudio) {
   return text.trim()
 }
 
-async function openclawChat(prompt) {
+async function openclawChat(prompt, sessionId) {
   const token = await loadGatewayToken()
+  const payload = {
+    model: OPENCLAW_MODEL,
+    messages: [
+      {
+        role: 'system',
+        content:
+          'You are Ocuclaw, a concise assistant replying to Even Realities G2 smart glasses. Keep responses short, readable at a glance, and under 300 characters unless asked otherwise.',
+      },
+      { role: 'user', content: prompt },
+    ],
+    stream: false,
+  }
+  if (typeof sessionId === 'string' && sessionId) payload.user = sessionId
   const response = await fetch(`${OPENCLAW_BASE_URL}/v1/chat/completions`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      model: OPENCLAW_MODEL,
-      messages: [
-        {
-          role: 'system',
-          content:
-            'You are Ocuclaw, a concise assistant replying to Even Realities G2 smart glasses. Keep responses short, readable at a glance, and under 300 characters unless asked otherwise.',
-        },
-        { role: 'user', content: prompt },
-      ],
-      stream: false,
-    }),
+    body: JSON.stringify(payload),
   })
 
   const body = await response.json().catch(() => ({}))
@@ -245,8 +247,9 @@ const server = createServer(async (req, res) => {
         jsonResponse(res, 400, { ok: false, error: 'Missing prompt' })
         return
       }
+      const sessionId = typeof body.sessionId === 'string' ? body.sessionId.trim() : ''
 
-      const text = await openclawChat(prompt)
+      const text = await openclawChat(prompt, sessionId)
       jsonResponse(res, 200, { ok: true, text })
       return
     }

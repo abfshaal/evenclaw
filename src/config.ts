@@ -1,6 +1,7 @@
 export const DEFAULT_PROXY_PORT = 8787
 export const PROXY_URL_STORAGE_KEY = 'ocuclaw.proxyUrl'
 export const PROXY_KEY_STORAGE_KEY = 'ocuclaw.proxyKey'
+export const SESSION_ID_STORAGE_KEY = 'ocuclaw.sessionId'
 
 export type RuntimeConfig = {
   proxyUrl?: string
@@ -57,4 +58,25 @@ export function saveProxyKey(value: string): string {
   const normalized = value.trim()
   localStorage.setItem(PROXY_KEY_STORAGE_KEY, normalized)
   return normalized
+}
+
+function generateSessionId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return `ocuclaw-${crypto.randomUUID()}`
+  }
+  return `ocuclaw-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
+}
+
+export function loadSessionId(): string {
+  const saved = localStorage.getItem(SESSION_ID_STORAGE_KEY)
+  if (saved?.trim()) return saved.trim()
+  const fresh = generateSessionId()
+  localStorage.setItem(SESSION_ID_STORAGE_KEY, fresh)
+  return fresh
+}
+
+export function rotateSessionId(): string {
+  const fresh = generateSessionId()
+  localStorage.setItem(SESSION_ID_STORAGE_KEY, fresh)
+  return fresh
 }

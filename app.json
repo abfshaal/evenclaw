@@ -10,7 +10,9 @@
     {
       "name": "network",
       "desc": "Connects to the local Ocuclaw proxy on your Mac to send prompts to OpenClaw and display responses.",
-      "whitelist": []
+      "whitelist": [
+        "https://confidence-crew-violations-sheriff.trycloudflare.com"
+      ]
     },
     {
       "name": "g2-microphone",
